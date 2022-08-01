@@ -1,12 +1,20 @@
 # [01] GUI LIB
-from curses import raw
-from itertools import count
-from multiprocessing.sharedctypes import Value
-from unicodedata import name
 import dearpygui.dearpygui as dpg
 import array
 import numpy as np
 import cv2
+
+# [02] SCREAN INFO LIB
+import ctypes
+
+# Cache Screen info
+user32 = ctypes.windll.user32
+
+# Get Screen Size
+screensize = {
+    "width":user32.GetSystemMetrics(78),
+    "height":user32.GetSystemMetrics(79)
+}
 
 
 # To access any DPG commands
@@ -15,9 +23,9 @@ dpg.create_context()
 # Define the application viewport
 dpg.create_viewport(
     title='Elsherbiniy Image Box', 
-    max_width=1024, max_height=768,
-    min_width= 1024, min_height= 768,
-    width=1024, height= 768,
+    max_width=screensize["width"], max_height=screensize["height"],
+    min_width= screensize["width"], min_height= screensize["height"],
+    width=screensize["width"], height= screensize["height"],
     x_pos=0, y_pos=0,
     resizable= True,
     always_on_top= False,
@@ -25,13 +33,13 @@ dpg.create_viewport(
     )
 
 
-w,h,d = 856 ,480 ,3
+w,h,d = 1280 ,536 ,3
 raw_data = np.zeros((h,w,d), dtype=np.float32)
 
 def update_dynamic_texture(new_frame):
     global raw_data, w, h, d
 
-    h2, w2, d2 = new_frame.shape
+    h, w, d = new_frame.shape
 
     # print("=" * 50)
     # print(new_frame[:d2])
@@ -40,18 +48,18 @@ def update_dynamic_texture(new_frame):
     # raw_data[:h2] = new_frame[:h2] / 255
     # raw_data[:w2] = new_frame[:w2] / 255
     # raw_data[:d2] = new_frame[:d2] / 255
-    raw_data[:h2, :w2] = new_frame[:, :] / 255
+    raw_data[:h, :w] = new_frame[:, :] / 255
 
 
 
 
 # Button Call Back Function
 def button_call_back():
-    global raw_data
+    global raw_data, h, w, d
     print("Video Execute")
 
     
-    cap = cv2.VideoCapture('/home/mostafa/Desktop/1638781__ep19_cima4u.mp4')
+    cap = cv2.VideoCapture(0)
 
     while cap.isOpened():
         
@@ -66,7 +74,25 @@ def button_call_back():
         # print(frame.astype(np.float32) / 255)
         # print("-" * 50)
         # print(np.float32(frame))
+
+        # Get the current frame height
+        height, width, depth = frame.shape
+
         if dpg.is_dearpygui_running():
+            
+            # Check Frame Comptability
+            if height != h or width != w or depth != d:
+
+                # Update Frame
+                h = height
+                w = width
+                d = depth
+
+                print("Frame Updated")
+
+                # Re render the dpg
+                dpg.render_dearpygui_frame()
+                
             update_dynamic_texture(frame)
         else:
             break
